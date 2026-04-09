@@ -1,0 +1,18 @@
+services:
+  # The "One Link" Gateway (Frontend + Proxy)
+  frontend:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "80:80"
+
+  # The Streaming Backend (Hidden behind the Proxy)
+  icecast:
+    image: moul/icecast
+    restart: unless-stopped
+    # We don't expose 8000 to the public anymore! 
+    # Nginx handles the traffic.
+    environment:
+      - ICECAST_SOURCE_PASSWORD=dataq123
+      - ICECAST_ADMIN_PASSWORD=dataq123
+      - ICECAST_PASSWORD=dataq123

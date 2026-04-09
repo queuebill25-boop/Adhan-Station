@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Broadcaster Dashboard | Adhan Live</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div id="app">
+        <main class="card broadcaster-card">
+            <header>
+                <h1 class="logo">Broadcast</h1>
+                <p class="subtitle">Secure Audio Ingest</p>
+            </header>
+
+            <section class="player-container">
+                <div id="statusBadge" class="status-badge" style="background: rgba(255,255,255,0.05);">
+                    <span id="statusDot" class="dot" style="background: #555; box-shadow: none; animation: none;"></span>
+                    <span id="statusText">READY</span>
+                </div>
+
+                <canvas id="visualizer" class="visualizer"></canvas>
+
+                <div class="broadcast-controls">
+                    <button id="startBtn" class="play-btn" style="background: #27ae60; box-shadow: 0 10px 40px rgba(39, 174, 96, 0.4);">
+                        <svg viewBox="0 0 24 24" fill="white" width="40" height="40">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                        </svg>
+                    </button>
+                    <button id="stopBtn" class="play-btn" style="background: var(--live-red); display: none;">
+                        <svg viewBox="0 0 24 24" fill="white" width="40" height="40">
+                            <path d="M6 6h12v12H6z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="micInfo" style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary);">
+                    Click the microphone to start live broadcast from your Mac.
+                </div>
+            </section>
+
+            <footer style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
+                <p style="font-size: 0.7rem; color: var(--text-secondary);">CONNECTED TO ASSET: /adhan_live</p>
+            </footer>
+        </main>
+
+        <div style="margin-top: 2rem; text-align: center;">
+            <a href="/" style="color: var(--text-secondary); text-decoration: none; font-size: 0.8rem;">Return to Listener View</a>
+        </div>
+    </div>
+
+    <script type="module" src="/broadcast.js"></script>
+</body>
+</html>
