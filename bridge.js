@@ -6,12 +6,10 @@ const wss = new WebSocketServer({ port: 3001 });
 wss.on('connection', (ws) => {
     console.log('Broadcaster connected via WebSocket');
 
-    // Create a ffmpeg process with LOW LATENCY flags
+    // Create a ffmpeg process with balanced settings
     const ffmpeg = spawn('ffmpeg', [
-        '-loglevel', 'quiet',
-        '-probesize', '32',
-        '-analyzeduration', '0',
         '-i', 'pipe:0',
+
         '-f', 'mp3',
         '-acodec', 'libmp3lame',
         '-ab', '128k',
