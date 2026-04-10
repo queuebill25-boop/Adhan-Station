@@ -13,9 +13,18 @@
 <body>
     <div id="splash-screen">
         <div class="splash-content">
-            <h1 class="logo">Adhan Live</h1>
-            <p class="subtitle">Broadcast Center</p>
+            <h1 class="logo" style="font-size: 3.5rem;">Adhan Live</h1>
+            <p class="subtitle" style="margin-bottom: 40px;">Select your Masjid to Enter</p>
+            
+            <div class="station-picker-container" style="margin-bottom: 40px;">
+                <select id="splash-mosque-selector" class="mosque-select" style="font-size: 1.2rem; padding: 20px 40px; width: 320px; text-align: center;">
+                    <!-- Mangalore Options will be here -->
+                </select>
+            </div>
+
             <button id="enter-btn" class="enter-btn">ENTER STATION</button>
+
+
         </div>
     </div>
 
@@ -27,12 +36,15 @@
                 <p class="subtitle">Live Community Stream</p>
             </header>
 
-            <section class="stations-section">
-                <p class="section-title">CHANNELS</p>
-                <div id="stations-list" class="stations-grid">
-                    <!-- Stations will be injected here by JS -->
+            <section class="stations-section" style="text-align: center;">
+                <p class="section-title">CHOOSE YOUR MASJID</p>
+                <div class="station-picker-container" style="margin-bottom: 20px;">
+                    <select id="main-mosque-selector" class="mosque-select" style="width: 100%; max-width: 320px; padding: 12px 24px;">
+                        <!-- Options injected by JS -->
+                    </select>
                 </div>
             </section>
+
 
             <section class="player-container">
 
@@ -59,13 +71,11 @@
                 </div>
             </section>
 
-            <footer class="countdown-section">
-                <div id="nextPrayerInfo">
-                    <p class="prayer-name">Next: <span id="nextPrayerName">...</span> in</p>
-                    <p class="timer" id="countdown">00:00:00</p>
-                </div>
+            <footer style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
+                <p style="font-size: 0.7rem; color: var(--text-secondary); opacity: 0.5;">MANGALORE ADHAN NETWORK v4.0</p>
             </footer>
         </main>
+
         
         <div style="margin-top: 2rem; text-align: center;">
             <a href="/broadcast.html" style="color: var(--text-secondary); text-decoration: none; font-size: 0.8rem; opacity: 0.6;">Broadcaster Login</a>
