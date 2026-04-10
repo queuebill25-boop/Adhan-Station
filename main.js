@@ -5,14 +5,30 @@ const pauseIcon = document.getElementById('pauseIcon');
 const volumeSlider = document.getElementById('volumeSlider');
 const countdownEl = document.getElementById('countdown');
 
-// Config: Point this to your actual Icecast stream URL
+// Audio Context for Volume Boost
+let audioCtx;
+let source;
+let gainNode;
+
+// Config
 const STREAM_URL = '/radio'; 
-const CITY = 'London'; // Change this to your city
+const CITY = 'London'; // Change this as needed
 const COUNTRY = 'UK';
 
 let isPlaying = false;
 
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    source = audioCtx.createMediaElementSource(streamAudio);
+    gainNode = audioCtx.createGain();
+    source.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+  }
+}
+
 function togglePlay() {
+  initAudio();
   if (isPlaying) {
     streamAudio.pause();
     streamAudio.src = ''; 
@@ -21,11 +37,10 @@ function togglePlay() {
   } else {
     streamAudio.src = STREAM_URL;
     streamAudio.load();
-    streamAudio.play().catch(err => {
-      console.error("Playback failed:", err);
-    });
+    streamAudio.play().catch(err => console.error(err));
     playIcon.style.display = 'none';
     pauseIcon.style.display = 'block';
+    if (audioCtx.state === 'suspended') audioCtx.resume();
   }
   isPlaying = !isPlaying;
 }
@@ -33,19 +48,38 @@ function togglePlay() {
 playBtn.addEventListener('click', togglePlay);
 
 volumeSlider.addEventListener('input', (e) => {
-  streamAudio.volume = e.target.value;
+  const val = parseFloat(e.target.value);
+  if (gainNode) gainNode.gain.value = val; // Allows boosting up to 2.0 (200%)
 });
 
-// Real Prayer Times Integration
+// Stats & Prayer
+async function updateStats() {
+  try {
+    const res = await fetch('/status-json.xsl');
+    const data = await res.json();
+    const stats = data.icestats.source;
+    
+    // Live Status
+    const isLive = stats ? true : false;
+    const badge = document.getElementById('liveBadge');
+    badge.textContent = isLive ? '● ON AIR' : '○ OFFLINE';
+    badge.style.color = isLive ? '#f87171' : '#94a3b8';
+
+    // Listener Count
+    const count = stats ? (stats.listeners || 0) : 0;
+    document.getElementById('listenerCount').textContent = `${count} Listeners`;
+  } catch (e) {
+    console.warn("Stats fetch failed");
+  }
+}
+
 async function fetchPrayerTimes() {
   try {
     const res = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${CITY}&country=${COUNTRY}&method=2`);
     const data = await res.json();
     const timings = data.data.timings;
     setupCountdown(timings);
-  } catch (err) {
-    console.error('Prayer API Error:', err);
-  }
+  } catch (err) { /* fallback */ }
 }
 
 function setupCountdown(timings) {
@@ -64,9 +98,7 @@ function setupCountdown(timings) {
       const pDate = new Date();
       pDate.setHours(h, m, 0);
       return pDate > now;
-    });
-
-    if (!next) next = prayerList[0];
+    }) || prayerList[0];
 
     const [h, m] = next.time.split(':');
     const nextDate = new Date();
@@ -78,27 +110,15 @@ function setupCountdown(timings) {
     const mm = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
     const ss = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
 
-    document.getElementById('nextPrayerName').innerText = next.name; // Needs this ID in HTML
+    const nextP = document.getElementById('nextPrayerName');
+    if (nextP) nextP.innerText = next.name;
     countdownEl.textContent = `${hh}:${mm}:${ss}`;
   }, 1000);
 }
 
-// Live Status Detection
-async function checkLiveStatus() {
-  try {
-    const res = await fetch('/status-json.xsl');
-    const data = await res.json();
-    const isLive = data.icestats.source ? true : false;
-    const badge = document.getElementById('liveBadge');
-    if (badge) {
-      badge.textContent = isLive ? '● ON AIR' : '○ OFFLINE';
-      badge.style.color = isLive ? '#f87171' : '#94a3b8';
-    }
-  } catch (e) { /* Fallback */ }
-}
-
+// Tick
 fetchPrayerTimes();
-setInterval(checkLiveStatus, 10000);
-checkLiveStatus();
+setInterval(updateStats, 5000);
+updateStats();
 
-console.log("Adhan Player Initialized with Real Timings");
+console.log("Premium Adhan Player Initialized with Volume Boost [v2.0]");
