@@ -17,8 +17,7 @@
 
             <section class="player-container">
                 <div class="status-badge">
-                    <span class="dot"></span>
-                    <span>LIVE</span>
+                    <span id="liveBadge">○ OFFLINE</span>
                 </div>
 
                 <button id="playBtn" class="play-btn" aria-label="Play Adhan">
@@ -42,8 +41,8 @@
 
             <footer class="countdown-section">
                 <div id="nextPrayerInfo">
-                    <p class="prayer-name">Next: Asr in</p>
-                    <p class="timer" id="countdown">00:42:15</p>
+                    <p class="prayer-name">Next: <span id="nextPrayerName">...</span> in</p>
+                    <p class="timer" id="countdown">00:00:00</p>
                 </div>
             </footer>
         </main>
