@@ -1,44 +1,47 @@
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const statusEl = document.getElementById('statusText');
+const mosqueSelector = document.getElementById('mosqueSelector');
 
 let audioContext;
 let recorder;
 let stream;
+let socket;
 
 startBtn.addEventListener('click', async () => {
     try {
+        const mosqueId = mosqueSelector.value;
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        statusEl.innerText = 'Go Live: CONNECTING...';
+        statusEl.innerText = 'CONNECTING...';
         
-        // Start visualizer
         setupVisualizer(stream);
 
-        // We use a simple WebSocket to send audio blobs to the bridge
-        const socket = new WebSocket(`wss://${window.location.host}/bridge`);
+        // Connect to bridge with the selected Mosque ID
+        socket = new WebSocket(`wss://${window.location.host}/bridge?mosque=${mosqueId}`);
         
         socket.onopen = () => {
             statusEl.innerText = 'ON AIR';
             statusEl.style.color = '#f87171';
             startBtn.style.display = 'none';
             stopBtn.style.display = 'inline-block';
+            mosqueSelector.disabled = true;
 
-            // High-quality Opus/WebM encoding for the bridge
             recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
             recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) socket.send(e.data);
+                if (e.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+                    socket.send(e.data);
+                }
             };
-            recorder.start(100); // Send chunks every 100ms
+            recorder.start(200); // 200ms chunks for stability
         };
 
-        socket.onerror = (err) => {
-            console.error('Socket error:', err);
-            statusEl.innerText = 'Connection Error';
+        socket.onclose = () => {
+            location.reload();
         };
 
     } catch (err) {
         console.error('Mic Error:', err);
-        statusEl.innerText = 'Mic Access Denied';
+        statusEl.innerText = 'Mic Error';
     }
 });
 
@@ -60,13 +63,13 @@ function setupVisualizer(stream) {
         requestAnimationFrame(draw);
         analyser.getByteFrequencyData(dataArray);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const barWidth = (canvas.width / dataArray.length) * 2;
+        const barWidth = (canvas.width / dataArray.length) * 2.5;
         let x = 0;
         dataArray.forEach(val => {
-            const h = val / 2;
+            const h = val / 2.5;
             ctx.fillStyle = '#fbbf24';
             ctx.fillRect(x, canvas.height - h, barWidth, h);
-            x += barWidth + 1;
+            x += barWidth + 2;
         });
     }
     draw();
