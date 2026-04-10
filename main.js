@@ -57,21 +57,27 @@ async function updateStats() {
   try {
     const res = await fetch('/status-json.xsl');
     const data = await res.json();
-    const stats = data.icestats.source;
+    
+    // Icecast JSON can be an object or an array depending on how many sources are active
+    let sources = data.icestats.source;
+    if (!Array.isArray(sources)) sources = [sources];
+    
+    const ourSource = sources.find(s => s && s.mount === '/adhan_live');
     
     // Live Status
-    const isLive = stats ? true : false;
+    const isLive = !!ourSource;
     const badge = document.getElementById('liveBadge');
     badge.textContent = isLive ? '● ON AIR' : '○ OFFLINE';
     badge.style.color = isLive ? '#f87171' : '#94a3b8';
 
     // Listener Count
-    const count = stats ? (stats.listeners || 0) : 0;
+    const count = ourSource ? (ourSource.listeners || 0) : 0;
     document.getElementById('listenerCount').textContent = `${count} Listeners`;
   } catch (e) {
-    console.warn("Stats fetch failed");
+    console.warn("Stats fetch failed - checking mount directly");
   }
 }
+
 
 async function fetchPrayerTimes() {
   try {
