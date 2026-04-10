@@ -1,73 +1,73 @@
-let mediaRecorder;
-let audioContext;
-let processor;
-let source;
-
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const statusEl = document.getElementById('statusText');
 
+let audioContext;
+let recorder;
+let stream;
 
 startBtn.addEventListener('click', async () => {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        statusEl.innerText = 'Go Live: CONNECTING...';
         
-        // Setup Visualizer
+        // Start visualizer
         setupVisualizer(stream);
 
-        // In a real production app, we would use a library like 'webcast.js'
-        // to send audio chunks to the server. For now, we will use a 
-        // specialized WebSocket or Fetch stream to our proxy.
+        // We use a simple WebSocket to send audio blobs to the bridge
+        const socket = new WebSocket(`wss://${window.location.host}/bridge`);
         
-        statusEl.innerText = 'Go Live: Connected to ejamaath.in';
-        statusEl.style.color = '#fbbf24';
-        startBtn.style.display = 'none';
-        stopBtn.style.display = 'inline-block';
+        socket.onopen = () => {
+            statusEl.innerText = 'ON AIR';
+            statusEl.style.color = '#f87171';
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
 
-        // NOTE: Browsers cannot send raw Icecast 'SOURCE' commands directly.
-        // We will use a library that bridges this in the final build.
-        console.log('Broadcasting started...');
+            // High-quality Opus/WebM encoding for the bridge
+            recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) socket.send(e.data);
+            };
+            recorder.start(100); // Send chunks every 100ms
+        };
+
+        socket.onerror = (err) => {
+            console.error('Socket error:', err);
+            statusEl.innerText = 'Connection Error';
+        };
 
     } catch (err) {
-        console.error('Error:', err);
-        statusEl.innerText = 'Error: No mic access';
+        console.error('Mic Error:', err);
+        statusEl.innerText = 'Mic Access Denied';
     }
 });
 
 stopBtn.addEventListener('click', () => {
-    location.reload(); // Quick reset
+    location.reload();
 });
 
 function setupVisualizer(stream) {
     const canvas = document.getElementById('visualizer');
     const ctx = canvas.getContext('2d');
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const audioCtx = new AudioContext();
     const source = audioCtx.createMediaStreamSource(stream);
     const analyser = audioCtx.createAnalyser();
-
     analyser.fftSize = 256;
     source.connect(analyser);
 
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
     function draw() {
         requestAnimationFrame(draw);
         analyser.getByteFrequencyData(dataArray);
-
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const barWidth = (canvas.width / bufferLength) * 2.5;
-        let barHeight;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const barWidth = (canvas.width / dataArray.length) * 2;
         let x = 0;
-
-        for (let i = 0; i < bufferLength; i++) {
-            barHeight = dataArray[i] / 2;
-            ctx.fillStyle = `rgb(251, 191, 36)`;
-            ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+        dataArray.forEach(val => {
+            const h = val / 2;
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(x, canvas.height - h, barWidth, h);
             x += barWidth + 1;
-        }
+        });
     }
     draw();
 }

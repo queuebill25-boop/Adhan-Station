@@ -3,16 +3,25 @@ services:
   frontend:
     build: .
     restart: unless-stopped
-    # Ports removed to avoid host conflict with Coolify proxy
 
-
-  # The Streaming Backend (Hidden behind the Proxy)
+  # The Streaming Backend
   icecast:
     image: moul/icecast
     restart: unless-stopped
-    # We don't expose 8000 to the public anymore! 
-    # Nginx handles the traffic.
     environment:
       - ICECAST_SOURCE_PASSWORD=dataq123
       - ICECAST_ADMIN_PASSWORD=dataq123
       - ICECAST_PASSWORD=dataq123
+
+  # The Audio Bridge (Translates Browser Mic -> Icecast)
+  bridge:
+    image: jrottenberg/ffmpeg:4.4-alpine
+    restart: unless-stopped
+    command: >
+      -i tcp://0.0.0.0:3001?listen
+      -f mp3
+      -acodec libmp3lame
+      -ab 128k
+      icecast://source:dataq123@icecast:8000/adhan_live
+    depends_on:
+      - icecast
