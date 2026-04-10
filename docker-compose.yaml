@@ -3,8 +3,8 @@ services:
   frontend:
     build: .
     restart: unless-stopped
-    ports:
-      - "80:80"
+    # Ports removed to avoid host conflict with Coolify proxy
+
 
   # The Streaming Backend (Hidden behind the Proxy)
   icecast:
