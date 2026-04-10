@@ -15,11 +15,9 @@ services:
 
   # The Audio Bridge (WebSocket -> Icecast)
   bridge:
-    image: node:18-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.bridge
     restart: unless-stopped
-    working_dir: /app
-    volumes:
-      - .:/app
-    command: sh -c "apk add --no-cache ffmpeg && npm install ws && node bridge.js"
     depends_on:
       - icecast
