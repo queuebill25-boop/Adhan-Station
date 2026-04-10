@@ -152,5 +152,23 @@ volumeSlider.addEventListener('input', (e) => {
   streamAudio.volume = e.target.value;
 });
 
+// Live Status Detection
+async function checkLiveStatus() {
+  try {
+    const res = await fetch('/status-json.xsl');
+    const data = await res.json();
+    const isLive = data.icestats.source ? true : false;
+    const badge = document.getElementById('liveBadge');
+    if (badge && !badge.textContent.includes('RECONNECTING')) {
+      badge.textContent = isLive ? '● ON AIR' : '○ OFFLINE';
+      badge.style.color = isLive ? '#f87171' : '#94a3b8';
+    }
+  } catch (e) { /* Fallback */ }
+}
+
+setInterval(checkLiveStatus, 5000);
+checkLiveStatus();
+
 fetchPrayerTimes();
-console.log("Adhan Player Final v3 Initialized");
+console.log("Adhan Player Final v4 Initialized");
+
