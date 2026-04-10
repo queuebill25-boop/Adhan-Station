@@ -3,17 +3,16 @@
     <admin>admin@localhost</admin>
 
     <limits>
-        <clients>200</clients>
+        <clients>100</clients>
         <sources>2</sources>
         <queue-size>524288</queue-size>
         <client-timeout>30</client-timeout>
         <header-timeout>15</header-timeout>
         <source-timeout>10</source-timeout>
-        <burst-on-connect>1</burst-on-connect>
+        <!-- If data is not coming for 10 seconds, disconnect the source -->
+        <burst-on-connect>0</burst-on-connect>
         <burst-size>65535</burst-size>
     </limits>
-
-
 
     <authentication>
         <!-- These can be overridden by environment variables in most Docker images -->
