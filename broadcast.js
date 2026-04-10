@@ -3,9 +3,10 @@ let audioContext;
 let processor;
 let source;
 
-const startBtn = document.getElementById('start-btn');
-const stopBtn = document.getElementById('stop-btn');
-const statusEl = document.getElementById('status-text');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const statusEl = document.getElementById('statusText');
+
 
 startBtn.addEventListener('click', async () => {
     try {
