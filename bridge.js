@@ -1,12 +1,20 @@
 import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
+import url from 'url';
 
 const wss = new WebSocketServer({ port: 3001 });
 
-wss.on('connection', (ws) => {
-    console.log('Low-Latency Broadcaster Connected');
+// Store active ffmpeg processes for different channels
+const activeChannels = new Map();
 
-    // Optimization: Added -tune zerolatency and -preset ultrafast
+wss.on('connection', (ws, req) => {
+    // Determine which "Room" or "Mosque" is connecting
+    const parameters = url.parse(req.url, true).query;
+    const mosqueId = parameters.mosque || 'default';
+    
+    console.log(`Broadcaster connecting to Room: ${mosqueId}`);
+
+    // Create a unique mount point for this specific mosque
     const ffmpeg = spawn('ffmpeg', [
         '-i', 'pipe:0',
         '-f', 'mp3',
@@ -14,9 +22,10 @@ wss.on('connection', (ws) => {
         '-ab', '128k',
         '-tune', 'zerolatency',
         '-preset', 'ultrafast',
-        '-flush_packets', '1',
-        'icecast://source:dataq123@icecast:8000/adhan_live'
+        `icecast://source:dataq123@icecast:8000/${mosqueId}`
     ]);
+
+    activeChannels.set(mosqueId, ffmpeg);
 
     ws.on('message', (data) => {
         ffmpeg.stdin.write(data);
@@ -24,10 +33,13 @@ wss.on('connection', (ws) => {
 
     ws.on('close', () => {
         ffmpeg.stdin.end();
-        console.log('Broadcaster disconnected');
+        activeChannels.delete(mosqueId);
+        console.log(`Room ${mosqueId} is now offline`);
     });
 
     ffmpeg.stderr.on('data', (data) => {
-        if (data.includes('Error')) console.log(`FFmpeg: ${data}`);
+        // Silently log errors
     });
 });
+
+console.log('Multi-Channel Adhan Bridge running on port 3001');
