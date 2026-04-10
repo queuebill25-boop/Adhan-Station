@@ -3,16 +3,23 @@ services:
   frontend:
     build: .
     restart: unless-stopped
-    # Ports removed to avoid host conflict with Coolify proxy
 
-
-  # The Streaming Backend (Hidden behind the Proxy)
+  # The Streaming Backend
   icecast:
     image: moul/icecast
     restart: unless-stopped
-    # We don't expose 8000 to the public anymore! 
-    # Nginx handles the traffic.
     environment:
       - ICECAST_SOURCE_PASSWORD=dataq123
       - ICECAST_ADMIN_PASSWORD=dataq123
       - ICECAST_PASSWORD=dataq123
+
+  # The Audio Bridge (WebSocket -> Icecast)
+  bridge:
+    image: node:18-alpine
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: sh -c "apk add --no-cache ffmpeg && npm install ws && node bridge.js"
+    depends_on:
+      - icecast

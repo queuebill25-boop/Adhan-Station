@@ -13,15 +13,13 @@ services:
       - ICECAST_ADMIN_PASSWORD=dataq123
       - ICECAST_PASSWORD=dataq123
 
-  # The Audio Bridge (Translates Browser Mic -> Icecast)
+  # The Audio Bridge (WebSocket -> Icecast)
   bridge:
-    image: jrottenberg/ffmpeg:4.4-alpine
+    image: node:18-alpine
     restart: unless-stopped
-    command: >
-      -i tcp://0.0.0.0:3001?listen
-      -f mp3
-      -acodec libmp3lame
-      -ab 128k
-      icecast://source:dataq123@icecast:8000/adhan_live
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: sh -c "apk add --no-cache ffmpeg && npm install ws && node bridge.js"
     depends_on:
       - icecast
