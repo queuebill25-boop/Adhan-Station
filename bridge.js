@@ -1,7 +1,7 @@
-const WebSocket = require('ws');
-const { spawn } = require('child_process');
+import { WebSocketServer } from 'ws';
+import { spawn } from 'child_process';
 
-const wss = new WebSocket.Server({ port: 3001 });
+const wss = new WebSocketServer({ port: 3001 });
 
 wss.on('connection', (ws) => {
     console.log('Broadcaster connected via WebSocket');
@@ -23,4 +23,10 @@ wss.on('connection', (ws) => {
         ffmpeg.stdin.end();
         console.log('Broadcaster disconnected');
     });
+
+    ffmpeg.stderr.on('data', (data) => {
+        console.log(`FFmpeg: ${data}`);
+    });
 });
+
+console.log('Bridge Server running on port 3001');
