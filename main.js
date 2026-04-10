@@ -12,19 +12,19 @@ const COUNTRY = 'UK';
 let isPlaying = false;
 let autoRetryInterval;
 
-// Autoplay Attempt
-window.addEventListener('load', () => {
-    attemptAutoplay();
+const splash = document.getElementById('splash-screen');
+const enterBtn = document.getElementById('enter-btn');
+
+// Global Activation on Splash Click
+enterBtn.addEventListener('click', () => {
+    splash.classList.add('hidden');
+    startStream(); // Start the audio for the rest of the session!
 });
 
 function attemptAutoplay() {
-    streamAudio.src = STREAM_URL;
-    streamAudio.play().then(() => {
-        setUIState(true);
-    }).catch(() => {
-        setUIState(false);
-    });
+    // We now rely on the 'Enter' button click to activate the audio context
 }
+
 
 function setUIState(playing) {
     isPlaying = playing;
