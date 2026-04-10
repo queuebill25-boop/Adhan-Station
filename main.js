@@ -80,7 +80,7 @@ function setUIState(playing) {
     pauseIcon.style.display = playing ? 'block' : 'none';
 }
 
-// ROBUST LIVE DETECTION
+// SMARTER LIVE DETECTION
 async function checkAllStations() {
     try {
         const res = await fetch('/status-json.xsl');
@@ -90,14 +90,13 @@ async function checkAllStations() {
         const stats = data.icestats;
 
         if (stats.source) {
-            // Case 1: Multiple sources (Array)
-            if (Array.isArray(stats.source)) {
-                liveMounts = stats.source.map(s => s.mount.replace('/', ''));
-            } 
-            // Case 2: Single source (Object)
-            else {
-                liveMounts = [stats.source.mount.replace('/', '')];
-            }
+            const sources = Array.isArray(stats.source) ? stats.source : [stats.source];
+            
+            liveMounts = sources.map(s => {
+                if (s.mount) return s.mount.replace('/', '');
+                if (s.listenurl) return s.listenurl.split('/').pop();
+                return '';
+            });
         }
 
         const currentIsLive = liveMounts.includes(CURRENT_STATION);
@@ -105,11 +104,11 @@ async function checkAllStations() {
         liveBadge.className = `status-badge ${currentIsLive ? 'on-air' : ''}`;
         
     } catch (e) {
-        console.error("Status check failed:", e);
+        // Silently fail to avoid UI jitter
     }
 }
 
-setInterval(checkAllStations, 3000); // Faster check (3s)
+setInterval(checkAllStations, 3000);
 
 streamAudio.addEventListener('ended', () => setTimeout(startStream, 3000));
 streamAudio.addEventListener('error', () => {});
