@@ -11,3 +11,6 @@ authInternalUsers:
       - action: api
       - action: read
       - action: publish
+
+paths:
+  all:
