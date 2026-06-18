@@ -12,4 +12,5 @@ services:
     restart: unless-stopped
     ports:
       - "8189:8189/udp"
+      - "8189:8189/tcp"
 
