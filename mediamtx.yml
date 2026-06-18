@@ -1,0 +1,13 @@
+api: yes
+apiAddress: :9997
+
+webrtc: yes
+webrtcAddress: :8889
+
+authMethod: internal
+authInternalUsers:
+  - user: any
+    permissions:
+      - action: api
+      - action: read
+      - action: publish

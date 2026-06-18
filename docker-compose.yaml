@@ -10,9 +10,7 @@ services:
     restart: unless-stopped
     ports:
       - "8189:8189/udp"
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml
     environment:
-      - MTX_API=yes
-      - MTX_APIADDRESS=:9997
-      - MTX_WEBRTC=yes
-      - MTX_WEBRTCADDRESS=:8889
       - MTX_WEBRTCICEHOSTNAT1TO1IPS=127.0.0.1
