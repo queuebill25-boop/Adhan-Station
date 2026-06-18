@@ -4,20 +4,14 @@ services:
     build: .
     restart: unless-stopped
 
-  # The Streaming Backend
-  icecast:
-    image: moul/icecast
+  # The WebRTC Media Server
+  mediamtx:
+    image: bluenviron/mediamtx:latest
     restart: unless-stopped
+    ports:
+      - "8189:8189/udp"
     environment:
-      - ICECAST_SOURCE_PASSWORD=dataq123
-      - ICECAST_ADMIN_PASSWORD=dataq123
-      - ICECAST_PASSWORD=dataq123
-
-  # The Audio Bridge (WebSocket -> Icecast)
-  bridge:
-    build:
-      context: .
-      dockerfile: Dockerfile.bridge
-    restart: unless-stopped
-    depends_on:
-      - icecast
+      - MTX_API=yes
+      - MTX_WEBRTC=yes
+      - MTX_WEBRTCADDRESS=:8889
+      - MTX_WEBRTCICEHOSTNAT1TO1IPS=127.0.0.1

@@ -55,23 +55,91 @@ mainSelector.addEventListener('change', (e) => {
     startStream();
 });
 
-function startStream() {
+let pc = null;
+
+async function startStream() {
     liveBadge.textContent = 'CONNECTING...';
     playBtn.classList.add('loading');
     
-    streamAudio.src = `/radio/${CURRENT_STATION}?t=${Date.now()}`;
-    streamAudio.load();
-    streamAudio.play().then(() => {
-        setUIState(true);
+    if (pc) {
+        pc.close();
+        pc = null;
+    }
+    streamAudio.srcObject = null;
+
+    try {
+        pc = new RTCPeerConnection({
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        });
+
+        pc.ontrack = (event) => {
+            streamAudio.srcObject = event.streams[0];
+            streamAudio.play().then(() => {
+                setUIState(true);
+                playBtn.classList.remove('loading');
+            }).catch(err => {
+                console.error("Audio playback error:", err);
+                playBtn.classList.remove('loading');
+            });
+        };
+
+        pc.onconnectionstatechange = () => {
+            if (pc && (pc.connectionState === 'failed' || pc.connectionState === 'closed')) {
+                stopStream();
+            }
+        };
+
+        // Add audio transceiver for listening
+        pc.addTransceiver('audio', { direction: 'recvonly' });
+
+        // Create the offer SDP
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        // Wait for ICE candidate gathering to complete (Non-Trickle ICE)
+        await new Promise((resolve) => {
+            if (pc.iceGatheringState === 'complete') {
+                resolve();
+            } else {
+                function checkState() {
+                    if (pc.iceGatheringState === 'complete') {
+                        pc.removeEventListener('icegatheringstatechange', checkState);
+                        resolve();
+                    }
+                }
+                pc.addEventListener('icegatheringstatechange', checkState);
+            }
+        });
+
+        // POST the offer to the WHEP endpoint
+        const response = await fetch(`/whep/${CURRENT_STATION}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/sdp'
+            },
+            body: pc.localDescription.sdp
+        });
+
+        if (!response.ok) {
+            throw new Error(`WHEP server returned status ${response.status}`);
+        }
+
+        const answerSdp = await response.text();
+        await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+
+    } catch (err) {
+        console.error('WebRTC WHEP Error:', err);
         playBtn.classList.remove('loading');
-    }).catch(err => {
-        playBtn.classList.remove('loading');
-    });
+        stopStream();
+    }
 }
 
 function stopStream() {
-    streamAudio.pause();
-    streamAudio.src = ''; 
+    if (pc) {
+        pc.close();
+        pc = null;
+    }
+    streamAudio.srcObject = null;
     setUIState(false);
 }
 
@@ -83,20 +151,16 @@ function setUIState(playing) {
 // SMARTER LIVE DETECTION
 async function checkAllStations() {
     try {
-        const res = await fetch('/status-json.xsl');
+        const res = await fetch('/api/paths');
         const data = await res.json();
         
         let liveMounts = [];
-        const stats = data.icestats;
-
-        if (stats.source) {
-            const sources = Array.isArray(stats.source) ? stats.source : [stats.source];
-            
-            liveMounts = sources.map(s => {
-                if (s.mount) return s.mount.replace('/', '');
-                if (s.listenurl) return s.listenurl.split('/').pop();
-                return '';
-            });
+        if (data.items) {
+            for (const key in data.items) {
+                if (data.items[key].sourceReady) {
+                    liveMounts.push(key);
+                }
+            }
         }
 
         const currentIsLive = liveMounts.includes(CURRENT_STATION);
@@ -110,15 +174,12 @@ async function checkAllStations() {
 
 setInterval(checkAllStations, 3000);
 
-streamAudio.addEventListener('ended', () => setTimeout(startStream, 3000));
-streamAudio.addEventListener('error', () => {});
-
 playBtn.addEventListener('click', () => {
-    streamAudio.paused ? startStream() : stopStream();
+    streamAudio.srcObject ? stopStream() : startStream();
 });
 
 volumeSlider.addEventListener('input', (e) => {
-  streamAudio.volume = e.target.value;
+    streamAudio.volume = e.target.value;
 });
 
 init();

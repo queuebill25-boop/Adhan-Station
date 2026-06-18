@@ -3,10 +3,7 @@ const stopBtn = document.getElementById('stopBtn');
 const statusEl = document.getElementById('statusText');
 const mosqueSelector = document.getElementById('mosqueSelector');
 
-let audioContext;
-let recorder;
-let stream;
-let socket;
+let pc, stream;
 
 startBtn.addEventListener('click', async () => {
     try {
@@ -16,36 +13,73 @@ startBtn.addEventListener('click', async () => {
         
         setupVisualizer(stream);
 
-        // Connect to bridge with the selected Mosque ID
-        socket = new WebSocket(`wss://${window.location.host}/bridge?mosque=${mosqueId}`);
-        
-        socket.onopen = () => {
-            statusEl.innerText = 'ON AIR';
-            statusEl.style.color = '#f87171';
-            startBtn.style.display = 'none';
-            stopBtn.style.display = 'inline-block';
-            mosqueSelector.disabled = true;
+        // Initialize WebRTC PeerConnection
+        pc = new RTCPeerConnection({
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        });
 
-            recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-                    socket.send(e.data);
+        // Add the audio track to the peer connection
+        stream.getTracks().forEach(track => {
+            pc.addTransceiver(track, { direction: 'sendonly' });
+        });
+
+        // Create the WebRTC offer
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        // Wait for ICE candidate gathering to complete (Non-Trickle ICE)
+        await new Promise((resolve) => {
+            if (pc.iceGatheringState === 'complete') {
+                resolve();
+            } else {
+                function checkState() {
+                    if (pc.iceGatheringState === 'complete') {
+                        pc.removeEventListener('icegatheringstatechange', checkState);
+                        resolve();
+                    }
                 }
-            };
-            recorder.start(200); // 200ms chunks for stability
-        };
+                pc.addEventListener('icegatheringstatechange', checkState);
+            }
+        });
 
-        socket.onclose = () => {
-            location.reload();
+        // Send the offer to the MediaMTX WHIP endpoint
+        const response = await fetch(`/whip/${mosqueId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/sdp'
+            },
+            body: pc.localDescription.sdp
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server returned status ${response.status}`);
+        }
+
+        // Apply the server's WebRTC answer
+        const answerSdp = await response.text();
+        await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+
+        statusEl.innerText = 'ON AIR';
+        statusEl.style.color = '#f87171';
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'inline-block';
+        mosqueSelector.disabled = true;
+
+        pc.onconnectionstatechange = () => {
+            if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                location.reload();
+            }
         };
 
     } catch (err) {
-        console.error('Mic Error:', err);
-        statusEl.innerText = 'Mic Error';
+        console.error('WebRTC WHIP Error:', err);
+        statusEl.innerText = 'Mic/WebRTC Error';
     }
 });
 
 stopBtn.addEventListener('click', () => {
+    if (pc) pc.close();
+    if (stream) stream.getTracks().forEach(track => track.stop());
     location.reload();
 });
 
