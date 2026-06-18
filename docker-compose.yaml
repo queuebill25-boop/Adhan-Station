@@ -6,11 +6,11 @@ services:
 
   # The WebRTC Media Server
   mediamtx:
-    image: bluenviron/mediamtx:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.mediamtx
     restart: unless-stopped
     ports:
       - "8189:8189/udp"
-    volumes:
-      - ./mediamtx.yml:/mediamtx.yml
     environment:
       - MTX_WEBRTCICEHOSTNAT1TO1IPS=127.0.0.1
