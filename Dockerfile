@@ -7,6 +7,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy all our local files (html, js, css)
 COPY . /usr/share/nginx/html
 
+# Copy public assets to the root directory
+RUN cp -r /usr/share/nginx/html/public/* /usr/share/nginx/html/ || true
+
 # Expose port 80 for the website and proxy
 EXPOSE 80
 
