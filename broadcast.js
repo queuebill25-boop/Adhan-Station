@@ -43,7 +43,7 @@ startBtn.addEventListener('click', async () => {
         });
 
         // Send the offer to the MediaMTX WHIP endpoint
-        const response = await fetch(`/whip/${mosqueId}`, {
+        const response = await fetch(`/${mosqueId}/whip`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/sdp'

@@ -112,7 +112,7 @@ async function startStream() {
         });
 
         // POST the offer to the WHEP endpoint
-        const response = await fetch(`/whep/${CURRENT_STATION}`, {
+        const response = await fetch(`/${CURRENT_STATION}/whep`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/sdp'
