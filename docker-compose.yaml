@@ -12,5 +12,4 @@ services:
     restart: unless-stopped
     ports:
       - "8189:8189/udp"
-    environment:
-      - MTX_WEBRTCICEHOSTNAT1TO1IPS=127.0.0.1
+

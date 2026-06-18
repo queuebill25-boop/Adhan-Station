@@ -3,6 +3,7 @@ apiAddress: :9997
 
 webrtc: yes
 webrtcAddress: :8889
+webrtcAdditionalHosts: [www.ejamaath.in]
 
 authMethod: internal
 authInternalUsers:
