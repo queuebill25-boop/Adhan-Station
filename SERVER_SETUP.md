@@ -1,35 +1,21 @@
-# Icecast Server Setup (Coolify Edition)
+# WebRTC MediaMTX Server Setup (Coolify Edition)
 
 Since you are using **Coolify**, the deployment is much easier as it handles SSL and containerization for you.
 
 ## 1. Prepare Your Files
-Ensure you have the following two files in your repository (which I've already created for you):
-1.  **`docker-compose.yml`**: Defines the Icecast service.
-2.  **`icecast.xml`**: Your custom server configuration.
+Ensure you have the following file in your repository:
+1.  **`docker-compose.yaml`**: Defines the frontend and MediaMTX WebRTC services.
 
 ## 2. Deploy in Coolify
 1.  **Add Resource**: In your Coolify dashboard, select your project/environment and click **+ Add Resource**.
-2.  **Select Docker Compose**: Choose "Docker Compose" and either point it to your Git repository or paste the content of the `docker-compose.yml` I provided.
-3.  **Config Storage**: In the "Storage" or "Files" section of the resource, ensure the `icecast.xml` is correctly mapped to `/etc/icecast2/icecast.xml`.
-4.  **Set Environment Variables**:
-    *   `ICECAST_SOURCE_PASSWORD`: Your secret password for broadcasting.
-    *   `ICECAST_ADMIN_PASSWORD`: For the admin dashboard.
+2.  **Select Docker Compose**: Choose "Docker Compose" and either point it to your Git repository or paste the content of the `docker-compose.yaml`.
+3.  **Set Environment Variables**:
+    *   `MTX_WEBRTCICEHOSTNAT1TO1IPS`: Set this to your server's **Public IP address** (e.g., `123.45.67.89`) so WebRTC clients outside the network can connect.
 
 ## 3. Configure Domain & SSL
 1.  In the "Network" or "Domains" tab of your Coolify resource, enter your intended domain (e.g., `https://adhan.yourdomain.com`).
 2.  Coolify will automatically provision an SSL certificate via Let's Encrypt.
-3.  Ensure port `8001` is exposed and the health check (optional) points to `/status.xsl`.
+3.  WebRTC requires HTTPS/SSL to allow microphone access on client browsers.
 
-
-## 4. Connecting the Broadcaster
-In your **Broadcaster Dashboard** or **BUTT** software:
-- **Server**: `adhan.yourdomain.com`
-- **Port**: `443` (HTTPS)
-- **Mount Point**: `/adhan_live`
-- **Password**: The source password you set in Coolify.
-
-
----
-
-### Low Latency Tip:
-In `icecast.xml`, ensure `<burst-on-connect>` is `0` to prevent the server from sending old segments to new listeners, keeping the stream as "Live" as possible.
+## 4. Firewall Settings
+Ensure that **UDP port 8189** is exposed and open in your server's firewall/security group, as WebRTC media streams are transmitted over UDP on this port.
