@@ -11,23 +11,67 @@ const selectFileBtn = document.getElementById('selectFileBtn');
 const fileNameDisplay = document.getElementById('fileNameDisplay');
 const micInfo = document.getElementById('micInfo');
 
+// Mic Selection Elements
+const micSelectorContainer = document.getElementById('micSelectorContainer');
+const micDeviceSelector = document.getElementById('micDeviceSelector');
+
 let pc, stream;
 let fileAudio = null;
 let fileAudioCtx = null;
 let selectedFile = null;
+
+// Populate Microphones list
+async function populateMics() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const mics = devices.filter(d => d.kind === 'audioinput');
+        
+        micDeviceSelector.innerHTML = '';
+        mics.forEach(mic => {
+            const opt = document.createElement('option');
+            opt.value = mic.deviceId;
+            opt.textContent = mic.label || `Microphone ${micDeviceSelector.options.length + 1}`;
+            micDeviceSelector.appendChild(opt);
+        });
+
+        if (mics.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'No microphones found';
+            micDeviceSelector.appendChild(opt);
+        }
+    } catch (err) {
+        console.error("Error enumerating devices:", err);
+    }
+}
+
+// Request permission to unlock labels, then populate
+async function requestPermissionsAndPopulateMics() {
+    try {
+        const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        tempStream.getTracks().forEach(t => t.stop());
+        await populateMics();
+    } catch (err) {
+        console.warn("Permission denied or error getting devices:", err);
+    }
+}
 
 // Handle Toggle
 sourceRadios.forEach(radio => {
     radio.addEventListener('change', (e) => {
         if (e.target.value === 'file') {
             fileSelectorContainer.style.display = 'block';
+            micSelectorContainer.style.display = 'none';
             micInfo.innerText = 'Select an audio file, then click the broadcast button below.';
         } else if (e.target.value === 'system') {
             fileSelectorContainer.style.display = 'none';
+            micSelectorContainer.style.display = 'none';
             micInfo.innerText = 'Make sure to check the "Share system audio" or "Share tab audio" checkbox in the browser prompt when starting.';
         } else {
             fileSelectorContainer.style.display = 'none';
+            micSelectorContainer.style.display = 'block';
             micInfo.innerText = 'Click the microphone to start live broadcast from your Mac.';
+            requestPermissionsAndPopulateMics();
         }
     });
 });
@@ -88,7 +132,16 @@ startBtn.addEventListener('click', async () => {
 
             stream = new MediaStream([audioTrack]);
         } else {
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Live Microphone Mode: get selected input device and disable voice filtering
+            const selectedMicId = micDeviceSelector.value;
+            stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    deviceId: selectedMicId ? { exact: selectedMicId } : undefined,
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                }
+            });
         }
 
         statusEl.innerText = 'CONNECTING...';
@@ -156,9 +209,10 @@ startBtn.addEventListener('click', async () => {
         stopBtn.style.display = 'inline-block';
         mosqueSelector.disabled = true;
 
-        // Disable toggles during active broadcast
+        // Disable toggles and selects during active broadcast
         sourceRadios.forEach(r => r.disabled = true);
         selectFileBtn.disabled = true;
+        micDeviceSelector.disabled = true;
 
         pc.onconnectionstatechange = () => {
             if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
@@ -211,3 +265,6 @@ function setupVisualizer(stream) {
     }
     draw();
 }
+
+// Initial Mic list population
+requestPermissionsAndPopulateMics();
