@@ -3,6 +3,9 @@ services:
   frontend:
     build: .
     restart: unless-stopped
+    depends_on:
+      - mediamtx
+      - icecast
 
   # The WebRTC Media Server
   mediamtx:
@@ -13,4 +16,13 @@ services:
     ports:
       - "8189:8189/udp"
       - "8189:8189/tcp"
+
+  # Icecast (for ESP32 and legacy players)
+  icecast:
+    image: moul/icecast
+    restart: unless-stopped
+    environment:
+      - ICECAST_SOURCE_PASSWORD=dataq123
+      - ICECAST_ADMIN_PASSWORD=dataq123
+      - ICECAST_PASSWORD=dataq123
 
