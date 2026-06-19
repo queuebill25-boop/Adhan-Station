@@ -22,6 +22,9 @@ sourceRadios.forEach(radio => {
         if (e.target.value === 'file') {
             fileSelectorContainer.style.display = 'block';
             micInfo.innerText = 'Select an audio file, then click the broadcast button below.';
+        } else if (e.target.value === 'system') {
+            fileSelectorContainer.style.display = 'none';
+            micInfo.innerText = 'Make sure to check the "Share system audio" or "Share tab audio" checkbox in the browser prompt when starting.';
         } else {
             fileSelectorContainer.style.display = 'none';
             micInfo.innerText = 'Click the microphone to start live broadcast from your Mac.';
@@ -42,9 +45,9 @@ audioFileInput.addEventListener('change', (e) => {
 startBtn.addEventListener('click', async () => {
     try {
         const mosqueId = mosqueSelector.value;
-        const isFileSource = Array.from(sourceRadios).find(r => r.checked).value === 'file';
+        const sourceType = Array.from(sourceRadios).find(r => r.checked).value;
 
-        if (isFileSource) {
+        if (sourceType === 'file') {
             if (!selectedFile) {
                 alert("Please select an audio file first!");
                 return;
@@ -63,6 +66,27 @@ startBtn.addEventListener('click', async () => {
             sourceNode.connect(fileAudioCtx.destination);
 
             stream = destNode.stream;
+        } else if (sourceType === 'system') {
+            statusEl.innerText = 'SELECT TAB/SCREEN...';
+            const displayStream = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                }
+            });
+
+            const audioTrack = displayStream.getAudioTracks()[0];
+            if (!audioTrack) {
+                displayStream.getTracks().forEach(t => t.stop());
+                throw new Error("System audio was not shared. Make sure to check the 'Share audio' box in the sharing prompt.");
+            }
+
+            // Stop the video track to save CPU and bandwidth
+            displayStream.getVideoTracks().forEach(t => t.stop());
+
+            stream = new MediaStream([audioTrack]);
         } else {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         }
@@ -117,7 +141,7 @@ startBtn.addEventListener('click', async () => {
         await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
         // Play file if it's an audio file broadcast
-        if (isFileSource && fileAudio && fileAudioCtx) {
+        if (sourceType === 'file' && fileAudio && fileAudioCtx) {
             await fileAudioCtx.resume();
             fileAudio.play();
             // Automatically stop the broadcast when the audio file ends

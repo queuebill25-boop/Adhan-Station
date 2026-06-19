@@ -29,12 +29,15 @@
             <section class="player-container">
                 <div class="source-selection" style="margin-bottom: 20px; text-align: center;">
                     <p class="section-title" style="margin-bottom: 10px;">AUDIO SOURCE</p>
-                    <div style="display: flex; justify-content: center; gap: 15px;">
+                    <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
                         <label style="cursor: pointer; padding: 10px 20px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--glass-border); font-size: 0.9rem;">
                             <input type="radio" name="audioSource" value="mic" checked style="margin-right: 8px; vertical-align: middle;"> Microphone
                         </label>
                         <label style="cursor: pointer; padding: 10px 20px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--glass-border); font-size: 0.9rem;">
                             <input type="radio" name="audioSource" value="file" style="margin-right: 8px; vertical-align: middle;"> Audio File
+                        </label>
+                        <label style="cursor: pointer; padding: 10px 20px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--glass-border); font-size: 0.9rem;">
+                            <input type="radio" name="audioSource" value="system" style="margin-right: 8px; vertical-align: middle;"> System Audio (YouTube)
                         </label>
                     </div>
                 </div>
