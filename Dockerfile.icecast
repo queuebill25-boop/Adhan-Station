@@ -1,0 +1,4 @@
+FROM moul/icecast:latest
+
+# Copy the custom optimized configuration file
+COPY icecast.xml /etc/icecast2/icecast.xml

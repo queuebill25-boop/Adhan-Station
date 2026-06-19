@@ -19,10 +19,10 @@ services:
 
   # Icecast (for ESP32 and legacy players)
   icecast:
-    image: moul/icecast
+    build:
+      context: .
+      dockerfile: Dockerfile.icecast
     restart: unless-stopped
-    volumes:
-      - ./icecast.xml:/etc/icecast2/icecast.xml
     environment:
       - ICECAST_SOURCE_PASSWORD=dataq123
       - ICECAST_ADMIN_PASSWORD=dataq123
