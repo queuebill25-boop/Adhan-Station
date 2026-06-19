@@ -17,8 +17,10 @@ const micDeviceSelector = document.getElementById('micDeviceSelector');
 
 let pc, stream;
 let fileAudio = null;
-let fileAudioCtx = null;
+let audioCtx = null;
 let selectedFile = null;
+let analyser = null;
+let drawVisual = null;
 
 // Populate Microphones list
 async function populateMics() {
@@ -91,6 +93,14 @@ startBtn.addEventListener('click', async () => {
         const mosqueId = mosqueSelector.value;
         const sourceType = Array.from(sourceRadios).find(r => r.checked).value;
 
+        // Initialize a single shared AudioContext
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        await audioCtx.resume();
+
+        let sourceNode = null;
+
         if (sourceType === 'file') {
             if (!selectedFile) {
                 alert("Please select an audio file first!");
@@ -101,13 +111,12 @@ startBtn.addEventListener('click', async () => {
             fileAudio = new Audio();
             fileAudio.src = URL.createObjectURL(selectedFile);
 
-            fileAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const sourceNode = fileAudioCtx.createMediaElementSource(fileAudio);
-            const destNode = fileAudioCtx.createMediaStreamDestination();
+            sourceNode = audioCtx.createMediaElementSource(fileAudio);
+            const destNode = audioCtx.createMediaStreamDestination();
 
             sourceNode.connect(destNode);
             // Connect to destination so the broadcaster can monitor the audio
-            sourceNode.connect(fileAudioCtx.destination);
+            sourceNode.connect(audioCtx.destination);
 
             stream = destNode.stream;
         } else if (sourceType === 'system') {
@@ -131,10 +140,11 @@ startBtn.addEventListener('click', async () => {
             displayStream.getVideoTracks().forEach(t => t.stop());
 
             stream = new MediaStream([audioTrack]);
+            sourceNode = audioCtx.createMediaStreamSource(stream);
         } else {
             // Live Microphone Mode: get selected input device and disable voice filtering
             const selectedMicId = micDeviceSelector.value;
-            stream = await navigator.mediaDevices.getUserMedia({
+            const micStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     deviceId: selectedMicId ? { exact: selectedMicId } : undefined,
                     echoCancellation: false,
@@ -142,10 +152,12 @@ startBtn.addEventListener('click', async () => {
                     autoGainControl: false
                 }
             });
+            stream = micStream;
+            sourceNode = audioCtx.createMediaStreamSource(stream);
         }
 
         statusEl.innerText = 'CONNECTING...';
-        setupVisualizer(stream);
+        setupVisualizer(sourceNode);
 
         // Initialize WebRTC PeerConnection
         pc = new RTCPeerConnection({
@@ -194,8 +206,7 @@ startBtn.addEventListener('click', async () => {
         await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
         // Play file if it's an audio file broadcast
-        if (sourceType === 'file' && fileAudio && fileAudioCtx) {
-            await fileAudioCtx.resume();
+        if (sourceType === 'file' && fileAudio) {
             fileAudio.play();
             // Automatically stop the broadcast when the audio file ends
             fileAudio.onended = () => {
@@ -223,6 +234,7 @@ startBtn.addEventListener('click', async () => {
     } catch (err) {
         console.error('WebRTC WHIP Error:', err);
         statusEl.innerText = 'Mic/WebRTC Error';
+        stopBtn.click();
     }
 });
 
@@ -231,27 +243,33 @@ stopBtn.addEventListener('click', () => {
         fileAudio.pause();
         fileAudio = null;
     }
-    if (fileAudioCtx) {
-        fileAudioCtx.close();
-        fileAudioCtx = null;
+    if (audioCtx) {
+        audioCtx.close();
+        audioCtx = null;
     }
+    if (drawVisual) {
+        cancelAnimationFrame(drawVisual);
+        drawVisual = null;
+    }
+    analyser = null;
     if (pc) pc.close();
     if (stream) stream.getTracks().forEach(track => track.stop());
     location.reload();
 });
 
-function setupVisualizer(stream) {
+function setupVisualizer(sourceNode) {
     const canvas = document.getElementById('visualizer');
     const ctx = canvas.getContext('2d');
-    const audioCtx = new AudioContext();
-    const source = audioCtx.createMediaStreamSource(stream);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    source.connect(analyser);
+    
+    if (!analyser) {
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+    }
+    sourceNode.connect(analyser);
 
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
     function draw() {
-        requestAnimationFrame(draw);
+        drawVisual = requestAnimationFrame(draw);
         analyser.getByteFrequencyData(dataArray);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const barWidth = (canvas.width / dataArray.length) * 2.5;
