@@ -3,14 +3,71 @@ const stopBtn = document.getElementById('stopBtn');
 const statusEl = document.getElementById('statusText');
 const mosqueSelector = document.getElementById('mosqueSelector');
 
+// Source Selection Elements
+const sourceRadios = document.getElementsByName('audioSource');
+const fileSelectorContainer = document.getElementById('fileSelectorContainer');
+const audioFileInput = document.getElementById('audioFileInput');
+const selectFileBtn = document.getElementById('selectFileBtn');
+const fileNameDisplay = document.getElementById('fileNameDisplay');
+const micInfo = document.getElementById('micInfo');
+
 let pc, stream;
+let fileAudio = null;
+let fileAudioCtx = null;
+let selectedFile = null;
+
+// Handle Toggle
+sourceRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        if (e.target.value === 'file') {
+            fileSelectorContainer.style.display = 'block';
+            micInfo.innerText = 'Select an audio file, then click the broadcast button below.';
+        } else {
+            fileSelectorContainer.style.display = 'none';
+            micInfo.innerText = 'Click the microphone to start live broadcast from your Mac.';
+        }
+    });
+});
+
+// File Selection Trigger
+selectFileBtn.addEventListener('click', () => audioFileInput.click());
+
+audioFileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        selectedFile = e.target.files[0];
+        fileNameDisplay.innerText = `Selected: ${selectedFile.name}`;
+    }
+});
 
 startBtn.addEventListener('click', async () => {
     try {
         const mosqueId = mosqueSelector.value;
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const isFileSource = Array.from(sourceRadios).find(r => r.checked).value === 'file';
+
+        if (isFileSource) {
+            if (!selectedFile) {
+                alert("Please select an audio file first!");
+                return;
+            }
+            statusEl.innerText = 'PREPARING FILE...';
+
+            fileAudio = new Audio();
+            fileAudio.src = URL.createObjectURL(selectedFile);
+
+            fileAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const sourceNode = fileAudioCtx.createMediaElementSource(fileAudio);
+            const destNode = fileAudioCtx.createMediaStreamDestination();
+
+            sourceNode.connect(destNode);
+            // Connect to destination so the broadcaster can monitor the audio
+            sourceNode.connect(fileAudioCtx.destination);
+
+            stream = destNode.stream;
+        } else {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+
         statusEl.innerText = 'CONNECTING...';
-        
         setupVisualizer(stream);
 
         // Initialize WebRTC PeerConnection
@@ -59,11 +116,25 @@ startBtn.addEventListener('click', async () => {
         const answerSdp = await response.text();
         await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
+        // Play file if it's an audio file broadcast
+        if (isFileSource && fileAudio && fileAudioCtx) {
+            await fileAudioCtx.resume();
+            fileAudio.play();
+            // Automatically stop the broadcast when the audio file ends
+            fileAudio.onended = () => {
+                stopBtn.click();
+            };
+        }
+
         statusEl.innerText = 'ON AIR';
         statusEl.style.color = '#f87171';
         startBtn.style.display = 'none';
         stopBtn.style.display = 'inline-block';
         mosqueSelector.disabled = true;
+
+        // Disable toggles during active broadcast
+        sourceRadios.forEach(r => r.disabled = true);
+        selectFileBtn.disabled = true;
 
         pc.onconnectionstatechange = () => {
             if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
@@ -78,6 +149,14 @@ startBtn.addEventListener('click', async () => {
 });
 
 stopBtn.addEventListener('click', () => {
+    if (fileAudio) {
+        fileAudio.pause();
+        fileAudio = null;
+    }
+    if (fileAudioCtx) {
+        fileAudioCtx.close();
+        fileAudioCtx = null;
+    }
     if (pc) pc.close();
     if (stream) stream.getTracks().forEach(track => track.stop());
     location.reload();

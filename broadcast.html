@@ -27,6 +27,26 @@
 
 
             <section class="player-container">
+                <div class="source-selection" style="margin-bottom: 20px; text-align: center;">
+                    <p class="section-title" style="margin-bottom: 10px;">AUDIO SOURCE</p>
+                    <div style="display: flex; justify-content: center; gap: 15px;">
+                        <label style="cursor: pointer; padding: 10px 20px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--glass-border); font-size: 0.9rem;">
+                            <input type="radio" name="audioSource" value="mic" checked style="margin-right: 8px; vertical-align: middle;"> Microphone
+                        </label>
+                        <label style="cursor: pointer; padding: 10px 20px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--glass-border); font-size: 0.9rem;">
+                            <input type="radio" name="audioSource" value="file" style="margin-right: 8px; vertical-align: middle;"> Audio File
+                        </label>
+                    </div>
+                </div>
+
+                <div id="fileSelectorContainer" style="display: none; margin-bottom: 20px; text-align: center;">
+                    <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
+                    <button id="selectFileBtn" class="enter-btn" style="padding: 10px 20px; font-size: 0.8rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); width: auto; min-width: 150px; margin: 0 auto; display: block;">
+                        CHOOSE MP3 FILE
+                    </button>
+                    <p id="fileNameDisplay" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 8px; word-break: break-all; opacity: 0.8;"></p>
+                </div>
+
                 <div id="statusBadge" class="status-badge" style="background: rgba(255,255,255,0.05);">
                     <span id="statusDot" class="dot" style="background: #555; box-shadow: none; animation: none;"></span>
                     <span id="statusText">READY</span>
