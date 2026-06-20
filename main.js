@@ -12,11 +12,7 @@ const liveBadge = document.getElementById('liveBadge');
 let CURRENT_STATION = 'kudroli_masjid'; 
 
 const stations = [
-    { id: 'zeenath_baksh', name: 'Zeenath Baksh Masjid' },
-    { id: 'kudroli_masjid', name: 'Kudroli Jumma Masjid' },
-    { id: 'ullal_dargah', name: 'Ullal Sayyid Madani' },
-    { id: 'idgah_hill', name: 'Idgah Maidan Masjid' },
-    { id: 'kankanady_masjid', name: 'Kankanady Masjid' }
+    { id: 'kudroli_masjid', name: 'Kudroli Jumma Masjid' }
 ];
 
 function init() {
@@ -42,18 +38,20 @@ function syncSelectors() {
 }
 
 enterBtn.addEventListener('click', () => {
-    CURRENT_STATION = splashSelector.value;
+    CURRENT_STATION = splashSelector ? splashSelector.value : 'kudroli_masjid';
     splash.style.opacity = '0';
     setTimeout(() => splash.style.display = 'none', 800);
     syncSelectors();
     startStream();
 });
 
-mainSelector.addEventListener('change', (e) => {
-    CURRENT_STATION = e.target.value;
-    if (splashSelector) splashSelector.value = CURRENT_STATION;
-    startStream();
-});
+if (mainSelector) {
+    mainSelector.addEventListener('change', (e) => {
+        CURRENT_STATION = e.target.value;
+        if (splashSelector) splashSelector.value = CURRENT_STATION;
+        startStream();
+    });
+}
 
 let pc = null;
 

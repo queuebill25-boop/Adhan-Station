@@ -1,7 +1,6 @@
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const statusEl = document.getElementById('statusText');
-const mosqueSelector = document.getElementById('mosqueSelector');
 
 // Mic Selection Elements
 const micSelectorContainer = document.getElementById('micSelectorContainer');
@@ -37,12 +36,15 @@ async function populateMics() {
     }
 }
 
-// Request permission to unlock labels, then populate
+// Request permission to unlock labels, then populate and autostart
 async function requestPermissionsAndPopulateMics() {
     try {
         const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         tempStream.getTracks().forEach(t => t.stop());
         await populateMics();
+        
+        // Autostart broadcasting
+        startBtn.click();
     } catch (err) {
         console.warn("Permission denied or error getting devices:", err);
     }
@@ -50,7 +52,7 @@ async function requestPermissionsAndPopulateMics() {
 
 startBtn.addEventListener('click', async () => {
     try {
-        const mosqueId = mosqueSelector.value;
+        const mosqueId = 'kudroli_masjid';
 
         // Initialize a single shared AudioContext
         if (!audioCtx) {
@@ -124,7 +126,6 @@ startBtn.addEventListener('click', async () => {
         statusEl.style.color = '#f87171';
         startBtn.style.display = 'none';
         stopBtn.style.display = 'inline-block';
-        mosqueSelector.disabled = true;
         micDeviceSelector.disabled = true;
 
         pc.onconnectionstatechange = () => {
