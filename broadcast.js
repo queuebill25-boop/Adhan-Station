@@ -3,22 +3,12 @@ const stopBtn = document.getElementById('stopBtn');
 const statusEl = document.getElementById('statusText');
 const mosqueSelector = document.getElementById('mosqueSelector');
 
-// Source Selection Elements
-const sourceRadios = document.getElementsByName('audioSource');
-const fileSelectorContainer = document.getElementById('fileSelectorContainer');
-const audioFileInput = document.getElementById('audioFileInput');
-const selectFileBtn = document.getElementById('selectFileBtn');
-const fileNameDisplay = document.getElementById('fileNameDisplay');
-const micInfo = document.getElementById('micInfo');
-
 // Mic Selection Elements
 const micSelectorContainer = document.getElementById('micSelectorContainer');
 const micDeviceSelector = document.getElementById('micDeviceSelector');
 
 let pc, stream;
-let fileAudio = null;
 let audioCtx = null;
-let selectedFile = null;
 let analyser = null;
 let drawVisual = null;
 
@@ -58,40 +48,9 @@ async function requestPermissionsAndPopulateMics() {
     }
 }
 
-// Handle Toggle
-sourceRadios.forEach(radio => {
-    radio.addEventListener('change', (e) => {
-        if (e.target.value === 'file') {
-            fileSelectorContainer.style.display = 'block';
-            micSelectorContainer.style.display = 'none';
-            micInfo.innerText = 'Select an audio file, then click the broadcast button below.';
-        } else if (e.target.value === 'system') {
-            fileSelectorContainer.style.display = 'none';
-            micSelectorContainer.style.display = 'none';
-            micInfo.innerText = 'Make sure to check the "Share system audio" or "Share tab audio" checkbox in the browser prompt when starting.';
-        } else {
-            fileSelectorContainer.style.display = 'none';
-            micSelectorContainer.style.display = 'block';
-            micInfo.innerText = 'Click the microphone to start live broadcast from your Mac.';
-            requestPermissionsAndPopulateMics();
-        }
-    });
-});
-
-// File Selection Trigger
-selectFileBtn.addEventListener('click', () => audioFileInput.click());
-
-audioFileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-        selectedFile = e.target.files[0];
-        fileNameDisplay.innerText = `Selected: ${selectedFile.name}`;
-    }
-});
-
 startBtn.addEventListener('click', async () => {
     try {
         const mosqueId = mosqueSelector.value;
-        const sourceType = Array.from(sourceRadios).find(r => r.checked).value;
 
         // Initialize a single shared AudioContext
         if (!audioCtx) {
@@ -99,62 +58,18 @@ startBtn.addEventListener('click', async () => {
         }
         await audioCtx.resume();
 
-        let sourceNode = null;
-
-        if (sourceType === 'file') {
-            if (!selectedFile) {
-                alert("Please select an audio file first!");
-                return;
+        // Live Microphone Mode: get selected input device and disable voice filtering
+        const selectedMicId = micDeviceSelector.value;
+        const micStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                deviceId: selectedMicId ? { exact: selectedMicId } : undefined,
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
             }
-            statusEl.innerText = 'PREPARING FILE...';
-
-            fileAudio = new Audio();
-            fileAudio.src = URL.createObjectURL(selectedFile);
-
-            sourceNode = audioCtx.createMediaElementSource(fileAudio);
-            const destNode = audioCtx.createMediaStreamDestination();
-
-            sourceNode.connect(destNode);
-            // Connect to destination so the broadcaster can monitor the audio
-            sourceNode.connect(audioCtx.destination);
-
-            stream = destNode.stream;
-        } else if (sourceType === 'system') {
-            statusEl.innerText = 'SELECT TAB/SCREEN...';
-            const displayStream = await navigator.mediaDevices.getDisplayMedia({
-                video: true,
-                audio: {
-                    echoCancellation: false,
-                    noiseSuppression: false,
-                    autoGainControl: false
-                }
-            });
-
-            const audioTrack = displayStream.getAudioTracks()[0];
-            if (!audioTrack) {
-                displayStream.getTracks().forEach(t => t.stop());
-                throw new Error("System audio was not shared. Make sure to check the 'Share audio' box in the sharing prompt.");
-            }
-
-            // Stop the video track to save CPU and bandwidth
-            displayStream.getVideoTracks().forEach(t => t.stop());
-
-            stream = new MediaStream([audioTrack]);
-            sourceNode = audioCtx.createMediaStreamSource(stream);
-        } else {
-            // Live Microphone Mode: get selected input device and disable voice filtering
-            const selectedMicId = micDeviceSelector.value;
-            const micStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    deviceId: selectedMicId ? { exact: selectedMicId } : undefined,
-                    echoCancellation: false,
-                    noiseSuppression: false,
-                    autoGainControl: false
-                }
-            });
-            stream = micStream;
-            sourceNode = audioCtx.createMediaStreamSource(stream);
-        }
+        });
+        stream = micStream;
+        const sourceNode = audioCtx.createMediaStreamSource(stream);
 
         statusEl.innerText = 'CONNECTING...';
         setupVisualizer(sourceNode);
@@ -205,24 +120,11 @@ startBtn.addEventListener('click', async () => {
         const answerSdp = await response.text();
         await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
-        // Play file if it's an audio file broadcast
-        if (sourceType === 'file' && fileAudio) {
-            fileAudio.play();
-            // Automatically stop the broadcast when the audio file ends
-            fileAudio.onended = () => {
-                stopBtn.click();
-            };
-        }
-
         statusEl.innerText = 'ON AIR';
         statusEl.style.color = '#f87171';
         startBtn.style.display = 'none';
         stopBtn.style.display = 'inline-block';
         mosqueSelector.disabled = true;
-
-        // Disable toggles and selects during active broadcast
-        sourceRadios.forEach(r => r.disabled = true);
-        selectFileBtn.disabled = true;
         micDeviceSelector.disabled = true;
 
         pc.onconnectionstatechange = () => {
@@ -239,10 +141,6 @@ startBtn.addEventListener('click', async () => {
 });
 
 stopBtn.addEventListener('click', () => {
-    if (fileAudio) {
-        fileAudio.pause();
-        fileAudio = null;
-    }
     if (audioCtx) {
         audioCtx.close();
         audioCtx = null;

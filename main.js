@@ -9,7 +9,7 @@ const mainSelector = document.getElementById('main-mosque-selector');
 const splashSelector = document.getElementById('splash-mosque-selector');
 const liveBadge = document.getElementById('liveBadge');
 
-let CURRENT_STATION = 'zeenath_baksh'; 
+let CURRENT_STATION = 'kudroli_masjid'; 
 
 const stations = [
     { id: 'zeenath_baksh', name: 'Zeenath Baksh Masjid' },
